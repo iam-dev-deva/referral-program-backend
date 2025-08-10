@@ -7,6 +7,7 @@ router.get('/check-auth', protect, userController.checkAuth);
 
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+router.post('/logout', userController.logout);
 
 router.use(protect);
 router.get('/', userController.getAllUsers);
