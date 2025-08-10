@@ -131,13 +131,21 @@ exports.login = async (req, res, next) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: 'Invalid email or password' });
 
+    const token = generateToken(user._id);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     res.json({
       id: user._id,
       name: user.name,
       email: user.email,
       referralCode: user.referralCode,
-      rewardPoints: user.rewardPoints,
-      token: generateToken(user._id),
+      rewardPoints: user.rewardPoints
     });
   } catch (err) {
     next(err);
@@ -171,6 +179,17 @@ exports.redeemReward = async (req, res, next) => {
     await user.save();
 
     res.json({ message: 'Reward redeemed successfully', rewardPoints: user.rewardPoints });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.checkAuth = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    res.status(200).json({ success: true, user: req.user });
   } catch (err) {
     next(err);
   }
