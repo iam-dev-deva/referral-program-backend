@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
+const logger = require('../helpers/logger')
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -86,6 +87,7 @@ exports.register = async (req, res, next) => {
       referralCode: generateReferralCode(name),
     });
 
+    let referrerId = null;
     if (referralCode) {
       const referrer = await User.findOne({ referralCode });
 
@@ -98,13 +100,34 @@ exports.register = async (req, res, next) => {
       }
 
       newUser.referrer = referrer._id;
-
       referrer.referrals.push(newUser._id);
       referrer.rewardPoints += 10;
       await referrer.save();
+
+      referrerId = referrer._id.toString();
+
+      logger.info({
+        userId: referrerId,
+        action: "referral_reward_update",
+        metadata: {
+          amount: 10,
+          referredUserId: newUser._id.toString(),
+          description: "Referral bonus for registering user"
+        },
+      });
     }
 
     await newUser.save();
+
+    logger.info({
+      userId: newUser._id.toString(),
+      action: "registration",
+      metadata: {
+        hasReferral: !!referralCode,
+        referrerId,
+        email: newUser.email,
+      },
+    });
 
     res.status(201).json({
       message: 'Registration successful',
@@ -136,7 +159,7 @@ exports.login = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-       sameSite: "none", 
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000
     });
 
@@ -155,7 +178,7 @@ exports.logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none", 
+    sameSite: "none",
     path: "/",
   });
 
@@ -187,6 +210,15 @@ exports.redeemReward = async (req, res, next) => {
 
     user.rewardPoints -= 50;
     await user.save();
+
+    logger.info({
+      userId: user._id.toString(),
+      action: "referral_reward_redeem",
+      metadata: {
+        amount: 50,
+        description: "Redeemed referral reward points"
+      },
+    });
 
     res.json({ message: 'Reward redeemed successfully', rewardPoints: user.rewardPoints });
   } catch (err) {
