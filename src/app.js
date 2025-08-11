@@ -10,7 +10,7 @@ const userRoutes = require('./routes/user.routes');
 const errorHandler = require('./middlewares/error.middleware');
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'https://referral-program2.netlify.app'],
   credentials: true,
 }));
 
