@@ -188,7 +188,7 @@ exports.logout = (req, res) => {
 exports.getMyReferralInfo = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id)
-      .populate('referrals', 'name email')
+      .populate('referrals', 'name email createdAt isDeleted')
       .select('-password');
 
     res.json({
